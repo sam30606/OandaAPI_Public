@@ -28,10 +28,16 @@ class TradingView:
     def defData(self, reqData):
         self.total_order = reqData["TOTAL_ORDER"]
         self.instrument = re.sub(r"([A-Z]{3})([A-Z]{3})", r"\1_\2", reqData["TICKER"])
-        self.side = 1 if reqData["SIDE"] == "buy" else -1
+        if reqData["SIDE"] == "buy":
+            self.side = 1
+        elif reqData["SIDE"] == "sell":
+            self.side = -1
+        else:
+            self.side = 0
+        roundC = len(str(reqData["ORDER_PRICE"]).split(".")[1])
         self.order_price = Decimal(str(reqData["ORDER_PRICE"]))
-        self.limit_price = Decimal(str(reqData["LIMIT_PRICE"]))
-        self.stop_price = Decimal(str(reqData["STOP_PRICE"]))
+        self.limit_price = Decimal(str(round(reqData["LIMIT_PRICE"], roundC)))
+        self.stop_price = Decimal(str(round(reqData["STOP_PRICE"], roundC)))
         self.order_time = reqData["ORDER_TIME"] / 1000
 
 
@@ -100,25 +106,28 @@ class Oanda(TradingView):
         return response
 
     def order(self):
-        rfc3339_order_time = datetime.datetime.fromtimestamp(
-            self.order_time, timezone(timedelta(hours=8))
-        ) + timedelta(minutes=2)
-        self.unit = math.floor(self.perAmount / self.order_price * 50 * self.side)
-        self.orderData = {
-            "order": {
-                "instrument": self.instrument,
-                "type": "MARKET_IF_TOUCHED",
-                "units": self.unit,
-                "price": str(self.order_price),
-                "timeInForce": "GTD",
-                "gtdTime": rfc3339_order_time.isoformat(),
-                "stopLossOnFill": {"price": str(self.stop_price)},
-                "takeProfitOnFill": {"price": str(self.limit_price)},
+        if self.side == 0:
+            return "It's close"
+        else:
+            rfc3339_order_time = datetime.datetime.fromtimestamp(
+                self.order_time, timezone(timedelta(hours=8))
+            ) + timedelta(minutes=2)
+            self.unit = math.floor(self.perAmount / self.order_price * 50 * self.side)
+            self.orderData = {
+                "order": {
+                    "instrument": self.instrument,
+                    "type": "MARKET_IF_TOUCHED",
+                    "units": self.unit,
+                    "price": str(self.order_price),
+                    "timeInForce": "GTD",
+                    "gtdTime": rfc3339_order_time.isoformat(),
+                    "stopLossOnFill": {"price": str(self.stop_price)},
+                    "takeProfitOnFill": {"price": str(self.limit_price)},
+                }
             }
-        }
-        print(self.order_price)
-        print(self.orderData)
-        orderResp = self.requestPost(
-            "https://api-fxpractice.oanda.com/v3/accounts/" + self.accountId + "/orders"
-        )
-        return orderResp
+            orderResp = self.requestPost(
+                "https://api-fxpractice.oanda.com/v3/accounts/"
+                + self.accountId
+                + "/orders"
+            )
+            return orderResp

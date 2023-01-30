@@ -5,6 +5,6 @@
   "SIDE": "{{strategy.order.alert_message}}",
   "ORDER_PRICE": {{close}},
   "LIMIT_PRICE": {{plot_1}},
-  "STOP_PRICE": {{plot_2}}",
+  "STOP_PRICE": {{plot_2}},
   "ORDER_TIME": {{plot_3}}
 }
